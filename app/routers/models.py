@@ -1,6 +1,6 @@
 from fastapi import APIRouter
 from fastapi.responses import FileResponse
-
+from app.src.models.model import ModelName, ModelManager
 
 from enum import Enum
 import os
@@ -10,28 +10,40 @@ router = APIRouter(
 )
 
 
-class ModelName(str, Enum):
-    randomforest = "randomforestregressor.pkl"
-    linearregression = "linearregression"
-
-
 @router.get("/")
 async def get_serialized_model(model_name: ModelName = ModelName.randomforest):
     """Get the serialized model
     :param model_name: query parameter for choose the model
     :return:
     """
-    path = os.path.join('../../ai/predictors/', model_name)
+    match model_name:
+        case ModelName.randomforest:
+            filename = "randomforestregressor.pkl"
+        case ModelName.linear:
+            filename = "linearregression.pkl"
 
+    path = os.path.join('./app/datasource/predictors/', filename)
     if os.path.exists(path):
-        return FileResponse(path, media_type="text/plain", filename=model_name)
+        print(model_name)
+        return FileResponse(path, media_type="text/plain", filename=filename)
     else:
-        return None
+        return path  # todo : HTPPException
 
 
 @router.get("/description")
 async def get_model_description(model_name: ModelName = ModelName.randomforest) -> dict:
-    pass
+    match model_name:
+        case ModelName.randomforest:
+            model_filename = "randomforestregressor.pkl"
+            metrics_filename = "metrics_rf.json"
+        case ModelName.linear:
+            model_filename = "linearregression.pkl"
+            metrics_filename = "metrics_rf.json"
+
+    model_manager = ModelManager(name=model_name, model_path=f"./app/datasource/predictors/{model_filename}",
+                           data_path="./app/datasource/datasets/Wines.csv", metrics_path=f"./app/datasource/predictors/{metrics_filename}")
+
+    return {"model_name": model_name, "parameters": model_manager.get_parameters(), "metrics": model_manager.get_metrics()}
 
 
 @router.put("/")  # enrichir le modèle d’une entrée de donnée supplémentaire (un vin en plus)
