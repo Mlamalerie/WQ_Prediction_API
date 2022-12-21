@@ -15,3 +15,6 @@ class Wine(BaseModel):
     pH : Optional[float]
     sulphates : Optional[float]
     alcohol : Optional[float]
+
+class WineLabelised(Wine):
+    quality : Optional[int] = Field(...,gt=0,le=10, example=5)
