@@ -1,6 +1,6 @@
-# Wine Quality Predictor 🍷
+# Wine Quality Predictor App 🍷
 
-Bienvenue sur Wine Quality Predictor API, une application qui vous permet de prédire la qualité d'un vin à partir de ses
+Une application qui vous permet de prédire la qualité d'un vin à partir de ses
 caractéristiques.
 
 ## Présentation
@@ -14,6 +14,9 @@ utilisé pour l'entrainement des modèles. Vous pouvez ainsi mettre à jour nos 
 
 Mais ce n'est pas tout! Si vous avez une bouteille de vin particulièrement exceptionnelle, vous pouvez l'ajouter à notre
 dataset ; Cela permettra de retrainer nos modèles et de les rendre encore plus précis dans leur prédiction de qualité.
+
+![](images/api_screenshot_test.gif)
+
 
 ## How to run it locally
 
@@ -187,6 +190,47 @@ avec le paramètre `model_name` qui peut prendre les valeurs suivantes :
 - `linearregression`
 - `randomforest`
 
+## Endpoints list
+
+### Wines Routes
+
+> ```GET api/wines```
+>> Get all the wines from the dataset
+
+> ```GET api/wines/{wine_id}```
+>> Get a specific wine from the dataset
+
+> ```POST api/wines```
+>> Add a new wine to the dataset
+
+> ```PUT api/wines/{wine_id}```
+>> Update a specific wine from the dataset
+
+> ```DELETE api/wines/{wine_id}```
+>> Delete a specific wine from the dataset
+
+### Model Routes
+
+> ```GET api/model```
+>> Get the model used to predict the quality of the wine
+
+> ```PUT api/model```
+>> Update the model used to predict the quality of the wine by adding a new wine to the dataset
+
+> ```GET api/model/description```
+>> Get various information about the model used to predict the quality of the wine, like the metrics (see below) of the last training, the hyperparameters of the model, and informations related to the model object.
+
+> ```POST api/model/retrain```
+>> Retrain the model used to predict the quality of the wine, save the model and the metrics of the training
+
+### Predictions
+
+> ```GET api/predict```
+>> Return the features of the best wine possible based on predefined criteria (see below)
+
+> ```POST api/predict```
+>> Predict the quality of a given wine using the model
+
 ## Dataset
 
 📦 1153 samples wine with 12 features each.
@@ -206,4 +250,12 @@ The features are:
 - alcohol
 - **quality** (score between 0 and 10)
 
+## Choices 
+
+#todo
+
+## Authors 👨🏾‍💻
+
+- Mlamali SAID SALIMO ([LinkedIn](https://www.linkedin.com/in/mlamalisaidsalimo/), [GitHub](https://www.linkedin.com/in/mlamalisaidsalimo/))
+- Benoit Gaillard
 
