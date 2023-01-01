@@ -1,13 +1,14 @@
 import uvicorn
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi import FastAPI
+from app.routers.wines import router as wines_router
 from app.routers.models import router as model_router
 from app.routers.predictions import router as predicts_router
 
 app = FastAPI(
     title="Wine Quality Predictor",
-    description="🌠 API to predict wine quality 🍷",
-    version="0.1",
+    description="🌠 API to predict wine quality 🍷. Grâce à cette API, vous pouvez facilement prédire la qualité d'un vin en utilisant les modèles de machine learning les plus performants, tout en ayant la possibilité de les mettre à jour en ajoutant de nouvelles données.",
+    version="0.5",
     contact=
     {
         "name": "Mlamali SAID SALIMO",
@@ -25,7 +26,7 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-app.include_router
+app.include_router(wines_router)
 app.include_router(model_router)
 app.include_router(predicts_router)
 

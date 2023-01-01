@@ -1,11 +1,16 @@
+import time
+
 import joblib
 from enum import Enum
 import os
 import json
+
+import numpy as np
 import pandas as pd
 from typing import Tuple, List
 
 from sklearn.ensemble import RandomForestClassifier
+from sklearn.metrics import mean_squared_error
 from sklearn.svm import SVC
 from sklearn.linear_model import SGDClassifier
 from sklearn.model_selection import train_test_split, GridSearchCV, cross_val_score
@@ -27,64 +32,44 @@ class DatasetManager():
         if not os.path.exists(self.file_path):
             raise FileNotFoundError(f"File {self.file_path} not found")
         self.base_dataset = pd.read_csv(self.file_path)
+        # replace colunm names with lower case
+        self.base_dataset.columns = self.base_dataset.columns.str.lower()
         name, ext = os.path.splitext(self.file_path)
         self.added_data_path = name + "_added" + ext
 
-    def get_base_dataset(self) -> pd.DataFrame:
+    def get_base_df_dataset(self) -> pd.DataFrame:
         return self.base_dataset
 
-    def get_added_data(self) -> pd.DataFrame:
-        if not os.path.exists(self.added_data_path):
-            return pd.DataFrame()
-        return pd.read_csv(self.added_data_path)
+    def get_added_df_dataset(self) -> pd.DataFrame:
+        return (
+            pd.read_csv(self.added_data_path)
+            if os.path.exists(self.added_data_path)
+            else pd.DataFrame()
+        )
 
     def get_dataset(self) -> pd.DataFrame:
         if os.path.exists(self.added_data_path):
-            return pd.concat([self.base_dataset, self.get_added_data()], ignore_index=True)
+            return pd.concat([self.base_dataset, self.get_added_df_dataset()], ignore_index=True)
         return self.base_dataset
 
     def get_base_wines(self) -> List[WineLabelised]:
         return self.base_dataset.to_dict(orient="records")
 
     def get_added_wines(self) -> List[WineLabelised]:
-        return self.get_added_data().to_dict(orient="records")
+        return self.get_added_df_dataset().to_dict(orient="records")
 
-    def get_base_wine(self, index: int) -> WineLabelised:
+    def get_wine_by_id(self, index: int) -> WineLabelised:
         return self.base_dataset.iloc[index].to_dict()
 
     def append_wine(self, wine: WineLabelised) -> Tuple[WineLabelised, List[Wine], bool]:
         wines_added = self.get_added_wines()
         wine_dict = wine.dict()
-        # check if wine already exists
-        if wine_dict not in wines_added:
-            wines_added.append(wine_dict)
-            self.base_dataset = pd.DataFrame(wines_added)
-            self.base_dataset.to_csv(self.added_data_path, index=False)
-            return wine_dict, wines_added, True
-        else:
+        if wine_dict in wines_added:
             return wine_dict, wines_added, False
-
-    def append_wine2(self, wine: Wine) -> Tuple[Wine, List]:
-        """ append a new wine to the dataset
-        Args:
-            wine (Wine): wine to append
-        """
-        name, ext = os.path.splitext(self.file_path)
-        self.added_data_path = name + "_added" + ext
-        is_added = False
-        if not os.path.exists(self.added_data_path):
-            df_result = pd.DataFrame.from_records([wine.__dict__])  # create dataframe from wine
-            if df_result.to_csv(self.added_data_path, index=False):  # save csv file
-                is_added = True
-        else:
-            df_to_add = pd.DataFrame.from_records([wine.__dict__])
-            df_base = pd.read_csv(self.added_data_path)  # read csv file
-            df_result = pd.concat([df_base, df_to_add], ignore_index=True)  # append wine
-            df_result = df_result.drop_duplicates()  # delete duplicates
-            df_result.to_csv(self.added_data_path, index=False)  # save csv file
-            is_added = True if len(df_result) > len(df_base) else False
-
-        return wine, df_result.to_dict('records'), is_added
+        wines_added.append(wine_dict)
+        self.base_dataset = pd.DataFrame(wines_added)
+        self.base_dataset.to_csv(self.added_data_path, index=False)
+        return wine_dict, wines_added, True
 
 
 class ModelManager():
@@ -109,7 +94,7 @@ class ModelManager():
                 metrics_filename = "metrics_lin.json"
 
         self.model_path = f"./app/datasource/predictors/{model_filename}"
-        self.dataset_manager = DatasetManager()
+        self.dataset_manager: DatasetManager = DatasetManager()
         self.metrics_path = f"./app/datasource/predictors/{metrics_filename}"
         self.added_data_path = None
         for path in [self.model_path, self.metrics_path]:
@@ -117,8 +102,8 @@ class ModelManager():
                 raise ValueError(f"Path '{path}' not exists... Please check the path")
 
         self.model = None
-        self.metrics = None
-        self.parameters = None
+        self.metrics: dict = {}
+        self.parameters: dict = {}
 
         self.load_model(self.model_path)
 
@@ -156,7 +141,7 @@ class ModelManager():
             joblib.dump(self.model, model_output_filepath)
             json.dump(self.metrics, open(metrics_output_filepath, "w"))
 
-    def __preprocessing(self, df_wines: pd.DataFrame) -> pd.DataFrame:
+    def __preprocessing(self, df_wines: pd.DataFrame, test_size=0.2) -> pd.DataFrame:
         """ preprocessing of the dataset
         Args:
             df (pd.DataFrame): dataset
@@ -177,17 +162,61 @@ class ModelManager():
 
         X = my_pipeline.fit_transform(X)
 
-        X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.2, random_state=0)
+        X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=test_size, random_state=0)
 
         return X_train, X_test, y_train, y_test
 
-    def train(self):
+    def train(self, save_model: bool = True):
+        """ train the model
 
+        """
+        # start timer
+        start_time = time.time()
+        # get dataset
         df_wines = self.dataset_manager.get_dataset()
         X_train, X_test, y_train, y_test = self.__preprocessing(df_wines)
-        # todo : train the model
-        if self.model:
-            return True
-            self.model.fit(df_wines_preprocessing)
-            self.metrics = self.model.score(df_wines_preprocessing)
+
+        if not self.model:
+            raise ValueError("Model not initialized")
+
+        # train the model
+
+        self.model.fit(X_train, y_train)
+
+        # evaluate the model
+        match self.name:
+            case ModelName.randomforest:
+                pass
+            case ModelName.linear:
+                pass
+
+        self.metrics["score_train"] = self.model.score(X_train, y_train)
+
+        self.metrics["score_test"] = self.model.score(X_test, y_test)
+        y_predict_rfr = self.model.predict(X_test)
+        mse = mean_squared_error(y_test, y_predict_rfr)
+        rmse = np.sqrt(mse)
+        self.metrics["rmse"] = rmse
+
+        if save_model:
             self.save_model(self.model_path, self.metrics_path)
+
+        # end timer
+        end_time = time.time()
+        self.metrics["time"] = end_time - start_time
+
+        return len(X_train), len(X_test)
+
+    def predict(self, wine: Wine) -> float:
+        """ predict the quality of a wine
+        Args:
+            wine (Wine): wine to predict
+        Returns:
+            float: quality of the wine
+        """
+        if not self.model:
+            raise ValueError("Model not initialized")
+
+        X = np.array(list(wine.__dict__.values()))  # todo : check if it works, if not, use
+
+        return self.model.predict([X])[0]
