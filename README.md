@@ -125,6 +125,68 @@ statistiquement possible), utilisez la route suivante :
 GET /api/predict
 ```
 
+### Recupération des modèles serialisés
+
+Pour récupérer les modèles serialisés, utilisez la route suivante :
+
+```http request
+GET /api/model
+```
+
+avec le paramètre `model_name` qui peut prendre les valeurs suivantes :
+
+- `linearregression`
+- `randomforest`
+
+### Description des modèles
+
+Pour obtenir une description des modèles, utilisez la route suivante :
+
+```http request
+GET /api/model/description
+```
+
+avec le paramètre `model_name` qui peut prendre les valeurs suivantes :
+
+- `linearregression`
+- `randomforest`
+
+### Enrichissement du dataset
+
+Pour ajouter de nouvelles données au dataset, utilisez la route suivante :
+
+```http request
+PUT /api/model
+Content-Type: application/json
+
+{
+    "fixed_acidity": 7.4,
+    "volatile_acidity": 0.7,
+    "citric_acid": 0,
+    "residual_sugar": 1.9,
+    "chlorides": 0.076,
+    "free_sulfur_dioxide": 11,
+    "total_sulfur_dioxide": 34,
+    "density": 0.9978,
+    "pH": 3.51,
+    "sulphates": 0.56,
+    "alcohol": 9.4
+}
+```
+
+### Reentrainement du modèle
+
+Pour retrain un modèle de machine learning, avec les nouvelles données ajoutées au dataset, utilisez la route suivante :
+
+```http request
+POST /api/model/retrain
+```
+
+avec le paramètre `model_name` qui peut prendre les valeurs suivantes :
+
+- `linearregression`
+- `randomforest`
+
 ## Dataset
 
 📦 1153 samples wine with 12 features each.
